@@ -12,16 +12,44 @@ var Client = module.exports = function (opts) {
   return this
 }
 
+Client.prototype.get = function (url, opts, cb) {
+  if (!cb) {
+    cb = opts
+    opts = {}
+  }
+
+  if (this.authToken) {
+    opts.headers = opts.headers || {}
+    opts.headers.authorization = 'Bearer ' + this.authToken
+  }
+
+  get(url, opts, cb)
+}
+
+Client.prototype.post = function (url, data, opts, cb) {
+  if (!cb) {
+    cb = opts
+    opts = {}
+  }
+
+  if (this.authToken) {
+    opts.headers = opts.headers || {}
+    opts.headers.authorization = 'Bearer ' + this.authToken
+  }
+
+  post(url, data, opts, cb)
+}
+
 Client.prototype.signup = function (opts, cb) {
   var url = this.getEndpoint('signup')
-  post(url, opts, cb)
+  post(url, opts, {}, cb)
 }
 
 Client.prototype.confirm = function (opts, cb) {
   var self = this
   var url = this.getEndpoint('confirm')
   this.email = opts.email
-  post(url, opts, function (err, data) {
+  post(url, opts, {}, function (err, data) {
     if (err) return cb(err)
 
     self.authToken = data.data.authToken
@@ -33,7 +61,7 @@ Client.prototype.login = function (opts, cb) {
   var self = this
   var url = this.getEndpoint('login')
   this.email = opts.email
-  post(url, opts, function (err, data) {
+  post(url, opts, {}, function (err, data) {
     if (err) return cb(err)
 
     self.authToken = data.data.authToken
@@ -43,14 +71,14 @@ Client.prototype.login = function (opts, cb) {
 
 Client.prototype.changePasswordRequest = function (opts, cb) {
   var url = this.getEndpoint('change-password-request')
-  post(url, opts, cb)
+  post(url, opts, {}, cb)
 }
 
 Client.prototype.changePassword = function (opts, cb) {
   var self = this
   var url = this.getEndpoint('change-password')
   this.email = opts.email
-  post(url, opts, function (err, data) {
+  post(url, opts, {}, function (err, data) {
     if (err) return cb(err)
 
     self.authToken = data.data.authToken
@@ -62,10 +90,10 @@ Client.prototype.getEndpoint = function (name) {
   return this.server + this.prefix + '/' + name
 }
 
-function post (url, data, cb) {
+function post (url, data, opts, cb) {
   if (process.browser && url.match(/^\//)) url = window.location.origin + url
 
-  jsonist.post(url, data, function (err, body, res) {
+  jsonist.post(url, data, opts, function (err, body, res) {
     if (err) return cb(err)
     if (body.error) return cb(new Error(body.error))
     if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
@@ -74,14 +102,14 @@ function post (url, data, cb) {
   })
 }
 
-// function get (url, cb) {
-//   if (process.browser && url.match(/^\//)) url = window.location.origin + url
+function get (url, opts, cb) {
+  if (process.browser && url.match(/^\//)) url = window.location.origin + url
 
-//   jsonist.get(url, function (err, body, res) {
-//     if (err) return cb(err)
-//     if (body.error) return cb(new Error(body.error))
-//     if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
+  jsonist.get(url, opts, function (err, body, res) {
+    if (err) return cb(err)
+    if (body && body.error) return cb(new Error(body.error))
+    if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
 
-//     cb(err, body, res)
-//   })
-// }
+    cb(err, body, res)
+  })
+}
