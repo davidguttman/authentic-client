@@ -1,6 +1,6 @@
 # AuthenticClient #
 
-The client component of Authentic. This helps interact with an [authentic-server](https://github.com/davidguttman/authentic-server) so that you can easily signup, confirm, login, and change-password for users. It will also help send tokens to microservices that require authentication.
+The client component of [authentic](https://github.com/davidguttman/authentic). This helps interact with an [authentic-server](https://github.com/davidguttman/authentic-server) so that you can easily signup, confirm, login, and change-password for users. It will also help send tokens to microservices that require authentication.
 
 ## Example ##
 
