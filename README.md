@@ -29,6 +29,12 @@ auth.login(creds, function (err) {
 })
 ```
 
+## Installation ##
+
+```
+npm install --save authentic-client
+```
+
 ## API ##
 
 ### Authentic(opts) ###
