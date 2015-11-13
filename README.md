@@ -63,6 +63,7 @@ auth.changePassword(opts, cb)
 Optional:
 
 * `prefix`: defaults to `'/auth'` if you set a custom prefix for your `authentic-server`, use that same prefix here
+* `authToken`: if you have an authToken from a previous login, you may pass it in for immediate use in `get` and `post`
 
 ### auth.signup(opts, cb)
 
@@ -76,6 +77,13 @@ Optional:
 
 See [authentic-server](https://github.com/davidguttman/authentic-server)'s Server API for usage
 
+### auth.get(url, opts, cb)
+
+Will make a request using an authToken if one is available, has the same API as [jsonist.get](https://github.com/rvagg/jsonist#jsonistgeturl--options--callback)
+
+### auth.post(url, data, opts, cb)
+
+Will make a request using an authToken if one is available, has the same API as [jsonist.post](https://github.com/rvagg/jsonist#jsonistposturl-data--options--callback)
 
 # License #
 
