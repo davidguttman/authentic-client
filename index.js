@@ -6,8 +6,8 @@ var Client = module.exports = function (opts) {
   this.server = opts.server
   this.prefix = opts.prefix || '/auth'
 
-  this.email = null
-  this.authToken = null
+  this.email = opts.email
+  this.authToken = opts.authToken
 
   return this
 }
