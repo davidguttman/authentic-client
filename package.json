@@ -1,6 +1,6 @@
 {
   "name": "authentic-client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The client component of Authentic. This helps interact with an `authentic-server` so that you can easily signup, confirm, login, and change-password for users. It will also help send tokens to microservices that require authentication.",
   "main": "index.js",
   "scripts": {
