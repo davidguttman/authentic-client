@@ -21,7 +21,7 @@
     "example": "example"
   },
   "devDependencies": {
-    "authentic-server": "^0.0.2",
+    "authentic-server": "^0.3.0",
     "authentic-service": "0.0.0",
     "level-mem": "^0.18.0",
     "standard": "^5.3.1",

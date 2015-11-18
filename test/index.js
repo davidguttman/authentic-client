@@ -62,7 +62,7 @@ tape('signup, confirm, login', function (t) {
     client.confirm(confirmOpts, function (err, resp) {
       t.ifError(err, 'should not error')
       t.equal(resp.success, true, 'should succeed')
-      t.equal(resp.data.authToken.length, 807, 'should get authToken')
+      t.ok(resp.data.authToken.length > 800, 'should get authToken')
 
       t.equal(resp.data.authToken, client.authToken, 'should store token')
 
