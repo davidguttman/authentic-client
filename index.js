@@ -1,4 +1,5 @@
 var jsonist = require('jsonist')
+var Wildemitter = require('wildemitter')
 
 var Client = module.exports = function (opts) {
   if (!(this instanceof Client)) return new Client(opts)
@@ -11,6 +12,8 @@ var Client = module.exports = function (opts) {
 
   return this
 }
+
+Wildemitter.mixin(Client)
 
 Client.prototype.get = function (url, opts, cb) {
   if (!cb) {
@@ -48,11 +51,11 @@ Client.prototype.signup = function (opts, cb) {
 Client.prototype.confirm = function (opts, cb) {
   var self = this
   var url = this.getEndpoint('confirm')
-  this.email = opts.email
+  this.setEmail(opts.email)
   post(url, opts, {}, function (err, data) {
     if (err) return cb(err)
 
-    self.authToken = data.data.authToken
+    self.setAuthToken(data.data.authToken)
     cb(null, data)
   })
 }
@@ -60,11 +63,11 @@ Client.prototype.confirm = function (opts, cb) {
 Client.prototype.login = function (opts, cb) {
   var self = this
   var url = this.getEndpoint('login')
-  this.email = opts.email
+  this.setEmail(opts.email)
   post(url, opts, {}, function (err, data) {
     if (err) return cb(err)
 
-    self.authToken = data.data.authToken
+    self.setAuthToken(data.data.authToken)
     cb(null, data)
   })
 }
@@ -77,17 +80,27 @@ Client.prototype.changePasswordRequest = function (opts, cb) {
 Client.prototype.changePassword = function (opts, cb) {
   var self = this
   var url = this.getEndpoint('change-password')
-  this.email = opts.email
+  this.setEmail(opts.email)
   post(url, opts, {}, function (err, data) {
     if (err) return cb(err)
 
-    self.authToken = data.data.authToken
+    self.setAuthToken(data.data.authToken)
     cb(null, data)
   })
 }
 
 Client.prototype.getEndpoint = function (name) {
   return this.server + this.prefix + '/' + name
+}
+
+Client.prototype.setAuthToken = function (token) {
+  this.authToken = token
+  this.emit('authToken', token)
+}
+
+Client.prototype.setEmail = function (email) {
+  this.email = email
+  this.emit('email', email)
 }
 
 function post (url, data, opts, cb) {
