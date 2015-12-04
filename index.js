@@ -89,7 +89,7 @@ Client.prototype.changePassword = function (opts, cb) {
   })
 }
 
-Client.prototype.logout = function() {
+Client.prototype.logout = function () {
   this.setAuthToken(null)
   this.setEmail(null)
 }
