@@ -89,6 +89,11 @@ Client.prototype.changePassword = function (opts, cb) {
   })
 }
 
+Client.prototype.logout = function() {
+  this.setAuthToken(null)
+  this.setEmail(null)
+}
+
 Client.prototype.getEndpoint = function (name) {
   return this.server + this.prefix + '/' + name
 }
