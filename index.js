@@ -1,14 +1,23 @@
+var AsyncCache = require('async-cache')
+var isUrl = require('is-url-superb')
 var jsonist = require('jsonist')
+var jwt = require('jsonwebtoken')
+var xtend = require('xtend')
 var Wildemitter = require('wildemitter')
 
 var Client = module.exports = function (opts) {
+  if (!opts) throw new Error('opts are required argument')
+  if (!isUrl(opts.server)) throw new Error('opts.server must be url')
+
   if (!(this instanceof Client)) return new Client(opts)
 
   this.server = opts.server
   this.prefix = opts.prefix || '/auth'
-
   this.email = opts.email
   this.authToken = opts.authToken
+
+  this.pubKeyUrl = (opts.pubKeyUrl || this.server + this.prefix + '/public-key')
+  this.cache = createCache(this.pubKeyUrl, opts.cacheDuration)
 
   return this
 }
@@ -21,12 +30,13 @@ Client.prototype.get = function (url, opts, cb) {
     opts = {}
   }
 
-  if (this.authToken) {
-    opts.headers = opts.headers || {}
-    opts.headers.authorization = 'Bearer ' + this.authToken
-  }
+  var token = this.authToken
+  if (!token) return get(url, opts, cb)
 
-  get(url, opts, cb)
+  return verifyToken(this.cache, token, function (err) {
+    if (err) return cb(err)
+    return get(url, xtendOpts(opts, token), cb)
+  })
 }
 
 Client.prototype.post = function (url, data, opts, cb) {
@@ -35,12 +45,13 @@ Client.prototype.post = function (url, data, opts, cb) {
     opts = {}
   }
 
-  if (this.authToken) {
-    opts.headers = opts.headers || {}
-    opts.headers.authorization = 'Bearer ' + this.authToken
-  }
+  var token = this.authToken
+  if (!token) return post(url, data, opts, cb)
 
-  post(url, data, opts, cb)
+  return verifyToken(this.cache, token, function (err) {
+    if (err) return cb(err)
+    return post(url, data, xtendOpts(opts, token), cb)
+  })
 }
 
 Client.prototype.signup = function (opts, cb) {
@@ -108,6 +119,10 @@ Client.prototype.setEmail = function (email) {
   this.emit('email', email)
 }
 
+Client.prototype.verifyToken = function (cb) {
+  return verifyToken(this.cache, this.authToken, cb)
+}
+
 function post (url, data, opts, cb) {
   if (process.browser && url.match(/^\//)) url = window.location.origin + url
 
@@ -130,4 +145,35 @@ function get (url, opts, cb) {
 
     cb(err, body, res)
   })
+}
+
+function verifyToken (cache, token, cb) {
+  return cache.get('pubKey', onPublicKey)
+
+  function onPublicKey (err, pubKey) {
+    return err
+      ? cb(err)
+      : jwt.verify(token, pubKey, { algorithms: ['RS256'] }, cb)
+  }
+}
+
+function createCache (pubKeyUrl, cacheDuration) {
+  return new AsyncCache({
+    maxAge: cacheDuration || 1000 * 60 * 60,
+
+    load: function (key, cb) {
+      return jsonist.get(pubKeyUrl, function (err, body) {
+        if (err) return cb(err)
+
+        var pubKey = ((body || {}).data || {}).publicKey
+        if (!pubKey) return cb(new Error('Could not retrieve public key'))
+
+        return cb(null, pubKey)
+      })
+    }
+  })
+}
+
+function xtendOpts (opts, token) {
+  return xtend(opts, { headers: { authorization: 'Bearer ' + token } })
 }
