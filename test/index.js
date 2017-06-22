@@ -16,6 +16,26 @@ var serviceUrl
 var server
 var serverUrl
 
+var throwsWhen = [
+  {
+    arg: undefined,
+    message: 'opts are required argument'
+  },
+  {
+    arg: {},
+    message: 'opts.server must be url'
+  }
+]
+
+throwsWhen.map(function (obj) {
+  tape(`throws when arg is ${obj.arg}`, function (t) {
+    t.plan(1)
+    t.throws(function () {
+      authenticClient(obj.arg)
+    }, obj.message)
+  })
+})
+
 tape('init', function (t) {
   server = createServer()
   server.listen(0, function (err) {
@@ -34,9 +54,24 @@ tape('init', function (t) {
   })
 })
 
+tape('no token, verify errors', function (t) {
+  client.verifyToken(function (err) {
+    t.equal(err.message, 'jwt must be provided', 'error matches')
+    t.end()
+  })
+})
+
 tape('request microservice without token', function (t) {
   client.get(serviceUrl, function (err, data) {
     t.equal(err.message, 'forbidden', 'should get forbidden error')
+    t.end()
+  })
+})
+
+tape('bad token, verify errors', function (t) {
+  client.setAuthToken('1234')
+  client.verifyToken(function (err) {
+    t.equal(err.message, 'jwt malformed', 'error matches')
     t.end()
   })
 })

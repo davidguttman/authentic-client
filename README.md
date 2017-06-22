@@ -85,6 +85,13 @@ Will make a request using an authToken if one is available, has the same API as 
 
 Will make a request using an authToken if one is available, has the same API as [jsonist.post](https://github.com/rvagg/jsonist#jsonistposturl-data--options--callback)
 
+If token is present for `get` and `post` methods, it will be verified before request against authentic-server's public key, and options will be extended with authorization header prior to sending request. 
+It will use `Bearer ${token}` scheme.
+
+You can also call `verifyToken` explicitly yourself and provide a callback. (In case of invalid token, `err` is going to be provided by `jsonwebtoken`)
+
+### auth.verifyToken(function(err){ ... })
+
 # License #
 
 MIT
