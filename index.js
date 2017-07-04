@@ -2,7 +2,6 @@ var AsyncCache = require('async-cache')
 var isUrl = require('is-url-superb')
 var jsonist = require('jsonist')
 var jwt = require('jsonwebtoken')
-var xtend = require('xtend')
 var Wildemitter = require('wildemitter')
 
 var Client = module.exports = function (opts) {
@@ -29,13 +28,12 @@ Client.prototype.get = function (url, opts, cb) {
     cb = opts
     opts = {}
   }
-
   var token = this.authToken
   if (!token) return get(url, opts, cb)
 
   return verifyToken(this.cache, token, function (err) {
     if (err) return cb(err)
-    return get(url, xtendOpts(opts, token), cb)
+    return get(url, addAuthHeader(token, opts), cb)
   })
 }
 
@@ -44,13 +42,41 @@ Client.prototype.post = function (url, data, opts, cb) {
     cb = opts
     opts = {}
   }
-
   var token = this.authToken
   if (!token) return post(url, data, opts, cb)
 
   return verifyToken(this.cache, token, function (err) {
     if (err) return cb(err)
-    return post(url, data, xtendOpts(opts, token), cb)
+    return post(url, data, addAuthHeader(token, opts), cb)
+  })
+}
+
+Client.prototype.put = function (url, data, opts, cb) {
+  if (!cb) {
+    cb = opts
+    opts = {}
+  }
+  var token = this.authToken
+  if (!token) return post(url, data, opts, cb)
+
+  return verifyToken(this.cache, token, function (err) {
+    if (err) return cb(err)
+    return put(url, data, addAuthHeader(token, opts), cb)
+  })
+}
+
+Client.prototype.delete = function (url, opts, cb) {
+  if (!cb) {
+    cb = opts
+    opts = {}
+  }
+
+  var token = this.authToken
+  if (!token) return del(url, opts, cb)
+
+  return verifyToken(this.cache, token, function (err) {
+    if (err) return cb(err)
+    return del(url, addAuthHeader(token, opts), cb)
   })
 }
 
@@ -124,9 +150,29 @@ Client.prototype.verifyToken = function (cb) {
 }
 
 function post (url, data, opts, cb) {
-  if (process.browser && url.match(/^\//)) url = window.location.origin + url
+  return dataHandler('post', url, data, opts, cb)
+}
 
-  jsonist.post(url, data, opts, function (err, body, res) {
+function put (url, data, opts, cb) {
+  return dataHandler('put', url, data, opts, cb)
+}
+
+function get (url, opts, cb) {
+  return handler('get', url, opts, cb)
+}
+
+function del (url, opts, cb) {
+  return handler('delete', url, opts, cb)
+}
+
+function dataHandler (method, url, data, opts, cb) {
+  var _url = getUrl(url)
+
+  jsonist[method === 'put' ? method : 'post'](_url, data, opts, function (
+    err,
+    body,
+    res
+  ) {
     if (err) return cb(err)
     if (body.error) return cb(new Error(body.error))
     if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
@@ -135,10 +181,14 @@ function post (url, data, opts, cb) {
   })
 }
 
-function get (url, opts, cb) {
-  if (process.browser && url.match(/^\//)) url = window.location.origin + url
+function handler (method, url, opts, cb) {
+  var _url = getUrl(url)
 
-  jsonist.get(url, opts, function (err, body, res) {
+  jsonist[method === 'delete' ? method : 'get'](_url, opts, function (
+    err,
+    body,
+    res
+  ) {
     if (err) return cb(err)
     if (body && body.error) return cb(new Error(body.error))
     if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
@@ -174,6 +224,16 @@ function createCache (pubKeyUrl, cacheDuration) {
   })
 }
 
-function xtendOpts (opts, token) {
-  return xtend(opts, { headers: { authorization: 'Bearer ' + token } })
+function getUrl (url) {
+  return process.browser && url.match(/^\//)
+    ? window.location.origin + url
+    : url
+}
+
+function addAuthHeader (token, opts) {
+  if (!token) return opts
+
+  return Object.assign({}, opts, {
+    headers: { authorization: 'Bearer ' + token }
+  })
 }

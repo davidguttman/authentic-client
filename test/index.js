@@ -106,21 +106,25 @@ tape('signup, confirm, login', function (t) {
   })
 })
 
-tape('microservice GET with token', function (t) {
-  client.get(serviceUrl, function (err, data) {
-    t.ifError(err, 'should not error')
-    t.equal(data.email, 'chet@scalehaus.io', 'should have auth email')
-    t.end()
+'get delete'.split(' ').map(function (method) {
+  tape('microservice ' + method.toUpperCase() + ' with token', function (t) {
+    client.get(serviceUrl, function (err, data) {
+      t.ifError(err, 'should not error')
+      t.equal(data.email, 'chet@scalehaus.io', 'should have auth email')
+      t.end()
+    })
   })
 })
 
-tape('microservice POST with token', function (t) {
-  var postData = {dummy: 'data'}
-  client.post(serviceUrl, postData, function (err, data) {
-    t.ifError(err, 'should not error')
-    t.equal(data.authData.email, 'chet@scalehaus.io', 'should have auth email')
-    t.deepEqual(data.postData, postData, 'should get postData')
-    t.end()
+'post put'.split(' ').map(function (method) {
+  tape('microservice ' + method.toUpperCase() + ' with token', function (t) {
+    var postData = {dummy: 'data'}
+    client[method](serviceUrl, postData, function (err, data) {
+      t.ifError(err, 'should not error')
+      t.equal(data.authData.email, 'chet@scalehaus.io', 'should have auth email')
+      t.deepEqual(data.postData, postData, 'should get postData')
+      t.end()
+    })
   })
 })
 
@@ -154,7 +158,9 @@ function createService (serverUrl) {
 
       res.writeHead(200, {'Content-Type': 'application/json'})
 
-      if (req.method === 'GET') return res.end(JSON.stringify(authData))
+      if (req.method === 'GET' || req.method === 'DELETE') {
+        return res.end(JSON.stringify(authData))
+      }
 
       var buf = ''
       req.on('data', function (chunk) { buf += chunk })
