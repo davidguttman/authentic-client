@@ -4,7 +4,8 @@
   "description": "The client component of Authentic. This helps interact with an `authentic-server` so that you can easily signup, confirm, login, and change-password for users. It will also help send tokens to microservices that require authentication.",
   "main": "index.js",
   "scripts": {
-    "test": "node test/index.js && standard"
+    "test": "node test/index.js && standard",
+    "coverage": "nyc node test/index.js && nyc report --reporter=html"
   },
   "keywords": [
     "authentic",
@@ -27,7 +28,7 @@
     "authentic-server": "^0.3.0",
     "authentic-service": "0.0.0",
     "level-mem": "^0.18.0",
-    "standard": "^5.4.1",
+    "standard": "^10.0.2",
     "tape": "^4.2.2"
   },
   "repository": {
