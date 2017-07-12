@@ -6,16 +6,17 @@ var Wildemitter = require('wildemitter')
 
 var Client = module.exports = function (opts) {
   if (!opts) throw new Error('opts are required argument')
-  if (!isUrl(opts.server)) throw new Error('opts.server must be url')
+  if (!opts.server || !isUrl(opts.server)) throw new Error('opts.server must be url')
 
   if (!(this instanceof Client)) return new Client(opts)
 
   this.server = opts.server
   this.prefix = opts.prefix || '/auth'
   this.email = opts.email
+  this.password = opts.password
   this.authToken = opts.authToken
 
-  this.pubKeyUrl = (opts.pubKeyUrl || this.server + this.prefix + '/public-key')
+  this.pubKeyUrl = (opts.pubKeyUrl || this.getEndpoint('public-key'))
   this.cache = createCache(this.pubKeyUrl, opts.cacheDuration)
 
   return this
@@ -28,12 +29,24 @@ Client.prototype.get = function (url, opts, cb) {
     cb = opts
     opts = {}
   }
-  var token = this.authToken
-  if (!token) return get(url, opts, cb)
-
-  return verifyToken(this.cache, token, function (err) {
-    if (err) return cb(err)
-    return get(url, addAuthHeader(token, opts), cb)
+  var self = this
+  verifyToken(this, function (err) {
+    if (err) {
+      var loginOpts = {
+        email: self.email,
+        password: self.password
+      }
+      if (shouldLogin(loginOpts)) {
+        return self.login(loginOpts, function (err) {
+          if (err) return cb(err)
+          return get(url, addAuthHeader(self.authToken, opts), cb)
+        })
+      } else {
+        return get(url, opts, cb) // behave like jsonist when there is not enough data to login
+      }
+    } else {
+      return get(url, addAuthHeader(self.authToken, opts), cb)
+    }
   })
 }
 
@@ -42,12 +55,24 @@ Client.prototype.post = function (url, data, opts, cb) {
     cb = opts
     opts = {}
   }
-  var token = this.authToken
-  if (!token) return post(url, data, opts, cb)
-
-  return verifyToken(this.cache, token, function (err) {
-    if (err) return cb(err)
-    return post(url, data, addAuthHeader(token, opts), cb)
+  var self = this
+  verifyToken(this, function (err) {
+    if (err) {
+      var loginOpts = {
+        email: self.email,
+        password: self.password
+      }
+      if (shouldLogin(loginOpts)) {
+        return self.login(loginOpts, function (err) {
+          if (err) return cb(err)
+          return post(url, data, addAuthHeader(self.authToken, opts), cb)
+        })
+      } else {
+        return post(url, data, opts, cb)
+      }
+    } else {
+      return post(url, data, addAuthHeader(self.authToken, opts), cb)
+    }
   })
 }
 
@@ -56,12 +81,24 @@ Client.prototype.put = function (url, data, opts, cb) {
     cb = opts
     opts = {}
   }
-  var token = this.authToken
-  if (!token) return post(url, data, opts, cb)
-
-  return verifyToken(this.cache, token, function (err) {
-    if (err) return cb(err)
-    return put(url, data, addAuthHeader(token, opts), cb)
+  var self = this
+  verifyToken(this, function (err) {
+    if (err) {
+      var loginOpts = {
+        email: self.email,
+        password: self.password
+      }
+      if (shouldLogin(loginOpts)) {
+        return self.login(loginOpts, function (err) {
+          if (err) return cb(err)
+          return put(url, data, addAuthHeader(self.authToken, opts), cb)
+        })
+      } else {
+        return put(url, data, opts, cb)
+      }
+    } else {
+      return put(url, data, addAuthHeader(self.authToken, opts), cb)
+    }
   })
 }
 
@@ -70,13 +107,24 @@ Client.prototype.delete = function (url, opts, cb) {
     cb = opts
     opts = {}
   }
-
-  var token = this.authToken
-  if (!token) return del(url, opts, cb)
-
-  return verifyToken(this.cache, token, function (err) {
-    if (err) return cb(err)
-    return del(url, addAuthHeader(token, opts), cb)
+  var self = this
+  verifyToken(this, function (err) {
+    if (err) {
+      var loginOpts = {
+        email: self.email,
+        password: self.password
+      }
+      if (shouldLogin(loginOpts)) {
+        return self.login(loginOpts, function (err) {
+          if (err) return cb(err)
+          return del(url, addAuthHeader(self.authToken, opts), cb)
+        })
+      } else {
+        return del(url, opts, cb)
+      }
+    } else {
+      return del(url, addAuthHeader(self.authToken, opts), cb)
+    }
   })
 }
 
@@ -146,7 +194,7 @@ Client.prototype.setEmail = function (email) {
 }
 
 Client.prototype.verifyToken = function (cb) {
-  return verifyToken(this.cache, this.authToken, cb)
+  return verifyToken(this, cb)
 }
 
 function post (url, data, opts, cb) {
@@ -175,7 +223,11 @@ function dataHandler (method, url, data, opts, cb) {
   ) {
     if (err) return cb(err)
     if (body.error) return cb(new Error(body.error))
-    if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
+    if (res.statusCode >= 400) {
+      err = new Error('Received statusCode ' + res.statusCode)
+      err.statusCode = res.statusCode
+      return cb(err)
+    }
 
     cb(err, body, res)
   })
@@ -191,20 +243,25 @@ function handler (method, url, opts, cb) {
   ) {
     if (err) return cb(err)
     if (body && body.error) return cb(new Error(body.error))
-    if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
+    if (res.statusCode >= 400) {
+      err = new Error('Received statusCode ' + res.statusCode)
+      err.statusCode = res.statusCode
+      return cb(err)
+    }
 
     cb(err, body, res)
   })
 }
 
-function verifyToken (cache, token, cb) {
-  return cache.get('pubKey', onPublicKey)
+function verifyToken (client, cb) {
+  return client.cache.get(client.pubKeyUrl, function (err, pubKey) {
+    if (err) return cb(err)
+    return jwt.verify(client.authToken, pubKey, { algorithms: ['RS256'] }, cb)
+  })
+}
 
-  function onPublicKey (err, pubKey) {
-    return err
-      ? cb(err)
-      : jwt.verify(token, pubKey, { algorithms: ['RS256'] }, cb)
-  }
+function shouldLogin (loginOpts) {
+  return loginOpts.email && loginOpts.password
 }
 
 function createCache (pubKeyUrl, cacheDuration) {

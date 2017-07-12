@@ -1,9 +1,10 @@
 var fs = require('fs')
+var path = require('path')
 var tape = require('tape')
 var http = require('http')
 var levelmem = require('level-mem')
 
-var authenticClient = require('../')
+var AuthenticClient = require('../')
 var authenticServer = require('authentic-server')
 var authenticService = require('authentic-service')
 
@@ -31,7 +32,7 @@ throwsWhen.map(function (obj) {
   tape(`throws when arg is ${obj.arg}`, function (t) {
     t.plan(1)
     t.throws(function () {
-      authenticClient(obj.arg)
+      client = new AuthenticClient(obj.arg)
     }, obj.message)
   })
 })
@@ -43,7 +44,7 @@ tape('init', function (t) {
 
     serverUrl = 'http://localhost:' + this.address().port
 
-    client = authenticClient({server: serverUrl})
+    client = new AuthenticClient({server: serverUrl})
 
     service = createService(serverUrl)
     service.listen(0, function (err) {
@@ -108,10 +109,8 @@ tape('signup, confirm, login', function (t) {
 
 'get delete'.split(' ').map(function (method) {
   tape('microservice ' + method.toUpperCase() + ' with token', function (t) {
-    client.get(serviceUrl, function (err, data) {
-      t.ifError(err, 'should not error')
-      t.equal(data.email, 'chet@scalehaus.io', 'should have auth email')
-      t.end()
+    client[method](serviceUrl, function (err, data) {
+      validateData(err, data, null, t)
     })
   })
 })
@@ -120,12 +119,58 @@ tape('signup, confirm, login', function (t) {
   tape('microservice ' + method.toUpperCase() + ' with token', function (t) {
     var postData = {dummy: 'data'}
     client[method](serviceUrl, postData, function (err, data) {
-      t.ifError(err, 'should not error')
-      t.equal(data.authData.email, 'chet@scalehaus.io', 'should have auth email')
-      t.deepEqual(data.postData, postData, 'should get postData')
+      validateData(err, data, postData, t)
+    })
+  })
+})
+
+'get delete'.split(' ').map(function (method) {
+  tape('microservice ' + method.toUpperCase() + ' with autologin', function (t) {
+    client = new AuthenticClient({
+      server: serverUrl,
+      email: 'chet@scalehaus.io',
+      password: 'notswordfish'
+    })
+
+    client[method](serviceUrl, function (err, data) {
+      validateData(err, data, null, t)
+    })
+  })
+})
+
+'post put'.split(' ').map(function (method) {
+  tape('microservice ' + method.toUpperCase() + ' with autologin', function (t) {
+    var postData = {dummy: 'data'}
+    client = new AuthenticClient({
+      server: serverUrl,
+      email: 'chet@scalehaus.io',
+      password: 'notswordfish'
+    })
+    client[method](serviceUrl, postData, function (err, data) {
+      validateData(err, data, postData, t)
+    })
+  })
+})
+
+'get post put delete'.split(' ').map(function (method) {
+  tape(method.toUpperCase() +
+    ' behaves like jsoninst on public routes when pass not provided', function (t) {
+    client = new AuthenticClient({
+      server: serverUrl
+    })
+    client[method](serviceUrl + '/public', {}, function (err, data) {
+      t.ifErr(err)
+      t.deepEquals(data, { some: 'publicdoc' }, 'body matches exact')
       t.end()
     })
   })
+})
+
+tape('logout', function (t) {
+  t.plan(2)
+  client.logout()
+  t.equals(client.email, null, 'forgets email')
+  t.equals(client.authToken, null, 'forgets the token')
 })
 
 tape('cleanup', function (t) {
@@ -134,11 +179,23 @@ tape('cleanup', function (t) {
   t.end()
 })
 
+function validateData (err, data, postData, t) {
+  t.ifError(err, 'should not error')
+
+  if (postData) {
+    t.equal(data.authData.email, 'chet@scalehaus.io', 'should have auth email')
+    t.deepEqual(data.postData, postData, 'should get postData')
+  } else {
+    t.equal(data.email, 'chet@scalehaus.io', 'should have auth email')
+  }
+  t.end()
+}
+
 function createServer () {
   return http.createServer(authenticServer({
     db: levelmem('mem', {valueEncoding: 'json'}),
-    publicKey: fs.readFileSync(__dirname + '/rsa-public.pem', 'utf-8'),
-    privateKey: fs.readFileSync(__dirname + '/rsa-private.pem', 'utf-8'),
+    publicKey: fs.readFileSync(path.join(__dirname, '/rsa-public.pem'), 'utf-8'),
+    privateKey: fs.readFileSync(path.join(__dirname, '/rsa-private.pem'), 'utf-8'),
     sendEmail: function (emailOpts, cb) {
       lastEmail = emailOpts
       setImmediate(cb)
@@ -149,14 +206,17 @@ function createServer () {
 function createService (serverUrl) {
   var decrypt = authenticService({server: serverUrl})
   return http.createServer(function (req, res) {
+    res.writeHead(200, {'Content-Type': 'application/json'})
+    if (req.url === '/public') {
+      return res.end(JSON.stringify({ some: 'publicdoc' }))
+    }
+
     decrypt(req, res, function (err, authData) {
       if (err) return console.error(err)
       if (!authData || !authData.email) {
         res.writeHead(403, {'Content-Type': 'application/json'})
         return res.end(JSON.stringify({error: 'forbidden'}))
       }
-
-      res.writeHead(200, {'Content-Type': 'application/json'})
 
       if (req.method === 'GET' || req.method === 'DELETE') {
         return res.end(JSON.stringify(authData))
