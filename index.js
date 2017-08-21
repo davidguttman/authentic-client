@@ -173,9 +173,18 @@ function dataHandler (method, url, data, opts, cb) {
     body,
     res
   ) {
+    var e
     if (err) return cb(err)
-    if (body.error) return cb(new Error(body.error))
-    if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
+    if (body.error) {
+      e = new Error(body.error)
+      e.statusCode = res.statusCode
+      return cb(e)
+    }
+    if (res.statusCode >= 400) {
+      e = new Error('Received statusCode ' + res.statusCode)
+      e.statusCode = res.statusCode
+      return cb(e)
+    }
 
     cb(err, body, res)
   })
@@ -189,9 +198,18 @@ function handler (method, url, opts, cb) {
     body,
     res
   ) {
+    var e
     if (err) return cb(err)
-    if (body && body.error) return cb(new Error(body.error))
-    if (res.statusCode >= 400) return cb(new Error('Received statusCode ' + res.statusCode))
+    if (body.error) {
+      e = new Error(body.error)
+      e.statusCode = res.statusCode
+      return cb(e)
+    }
+    if (res.statusCode >= 400) {
+      e = new Error('Received statusCode ' + res.statusCode)
+      e.statusCode = res.statusCode
+      return cb(e)
+    }
 
     cb(err, body, res)
   })
