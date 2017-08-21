@@ -63,7 +63,9 @@ tape('no token, verify errors', function (t) {
 
 tape('request microservice without token', function (t) {
   client.get(serviceUrl, function (err, data) {
-    t.equal(err.message, 'forbidden', 'should get forbidden error')
+    t.equal(err.message, 'Forbidden', 'should get forbidden error')
+    t.equal(err.statusCode, 403, 'should get 403 status code')
+    t.deepEqual(err.body, {error: 'forbidden'})
     t.end()
   })
 })
