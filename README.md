@@ -8,9 +8,24 @@ The client component of [authentic](https://github.com/davidguttman/authentic). 
 var Authentic = require('authentic-client')
 
 var auth = Authentic({
-  server: 'https://auth.scalehaus.io',
+  server: 'https://auth.scalehaus.io'
+})
+
+var creds = {
   email: 'chet@scalehaus.io',
   password: 'notswordfish'
+}
+
+// Step 1: log in
+auth.login(creds, function (err) {
+  if (err) return console.error(err)
+
+  // Step 2: make a JSON request with authentication
+  var url = 'https://reporting.scalehaus.io/report'
+  auth.get(url, function (err, data) {
+    // show that report
+    console.log(data)
+  })
 })
 ```
 
@@ -26,15 +41,9 @@ npm install --save authentic-client
 
 This is the main entry point. Accepts an options object and returns an object with helper methods.
 
-- _server_ is a required option to provide. 
-- _email_ and _password_ are optional, and if they are present, it will auto-login so you don't have to login manually.
-- you can provide optional `onLogin` callback to be called after auto-login.
-
 ```js
 var auth = Authentic({
-  server: 'https://auth.scalehaus.io',
-  email: 'chet@scalehouse.io',
-  password: 'notswordfish'
+  server: 'https://auth.scalehaus.io'
 })
 
 // auth is now an object with various methods:
@@ -70,7 +79,8 @@ See [authentic-server](https://github.com/davidguttman/authentic-server)'s Serve
 
 ### auth.get(url, opts, cb)
 
-Will make a request using an authToken if one is available, has the same API as [jsonist.get](https://github.com/rvagg/jsonist#jsonistgeturl--options--callback)
+Will make a request using an authToken if one is available, has the same API as [jsonist.get]
+(https://github.com/rvagg/jsonist#jsonistgeturl--options--callback)
 
 ### auth.post(url, data, opts, cb)
 
@@ -82,7 +92,8 @@ Will make a request using an authToken if one is available, has the same API as 
 
 ### auth.delete(url, opts, cb)
 
-Will make a request using an authToken if one is available, has the same API as [jsonist.delete](https://github.com/rvagg/jsonist#jsonistdeleteurl--options--callback)
+Will make a request using an authToken if one is available, has the same API as [jsonist.delete]
+(https://github.com/rvagg/jsonist#jsonistdeleteurl--options--callback)
 
 If token is present, it will be verified before request against authentic-server's public key, and options will be extended with authorization header prior to sending request. 
 It will use `Bearer ${token}` scheme.
@@ -90,12 +101,6 @@ It will use `Bearer ${token}` scheme.
 You can also call `verifyToken` explicitly yourself and provide a callback. (In case of invalid token, `err` is going to be provided by `jsonwebtoken`)
 
 ### auth.verifyToken(function(err){ ... })
-
-### Lifecycle events
-
-- 'authToken' each time authToken is being set
-- 'email' - each time email is being set
-
 
 # License #
 
