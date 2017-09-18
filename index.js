@@ -214,43 +214,35 @@ function del (url, opts, cb) {
 }
 
 function dataHandler (method, url, data, opts, cb) {
-  var _url = getUrl(url)
-
-  jsonist[method === 'put' ? method : 'post'](_url, data, opts, function (
-    err,
-    body,
-    res
-  ) {
-    if (err) return cb(err)
-    if (body.error) return cb(new Error(body.error))
-    if (res.statusCode >= 400) {
-      err = new Error('Received statusCode ' + res.statusCode)
-      err.statusCode = res.statusCode
-      return cb(err)
-    }
-
-    cb(err, body, res)
-  })
+  jsonist[method === 'put' ? method : 'post'](
+    getUrl(url),
+    data,
+    opts,
+    jsonistHandler(cb)
+  )
 }
 
 function handler (method, url, opts, cb) {
-  var _url = getUrl(url)
+  jsonist[method === 'delete' ? method : 'get'](
+    getUrl(url),
+    opts,
+    jsonistHandler(cb)
+  )
+}
 
-  jsonist[method === 'delete' ? method : 'get'](_url, opts, function (
-    err,
-    body,
-    res
-  ) {
-    if (err) return cb(err)
-    if (body && body.error) return cb(new Error(body.error))
+function jsonistHandler (cb) {
+  return function (err, body, res) {
+    if (err) {
+      var newError = new Error(err.message)
+      newError.statusCode = typeof err.statusCode === 'number' ? err.statusCode : 500
+      return cb(newError, body, res)
+    }
     if (res.statusCode >= 400) {
       err = new Error('Received statusCode ' + res.statusCode)
       err.statusCode = res.statusCode
-      return cb(err)
     }
-
     cb(err, body, res)
-  })
+  }
 }
 
 function verifyToken (client, cb) {
