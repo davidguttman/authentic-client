@@ -211,9 +211,11 @@ function verifyToken (cache, token, cb) {
   return cache.get('pubKey', onPublicKey)
 
   function onPublicKey (err, pubKey) {
-    return err
-      ? cb(err)
-      : jwt.verify(token, pubKey, { algorithms: ['RS256'] }, cb)
+    if (err) return cb(err)
+
+    Error.captureStackTrace = Error.captureStackTrace || function () { }
+
+    jwt.verify(token, pubKey, { algorithms: ['RS256'] }, cb)
   }
 }
 
