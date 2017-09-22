@@ -1,6 +1,7 @@
 var fs = require('fs')
 var tape = require('tape')
 var http = require('http')
+var path = require('path')
 var levelmem = require('level-mem')
 
 var authenticClient = require('../')
@@ -139,8 +140,8 @@ tape('cleanup', function (t) {
 function createServer () {
   return http.createServer(authenticServer({
     db: levelmem('mem', {valueEncoding: 'json'}),
-    publicKey: fs.readFileSync(__dirname + '/rsa-public.pem', 'utf-8'),
-    privateKey: fs.readFileSync(__dirname + '/rsa-private.pem', 'utf-8'),
+    publicKey: fs.readFileSync(path.join(__dirname, '/rsa-public.pem'), 'utf-8'),
+    privateKey: fs.readFileSync(path.join(__dirname, '/rsa-private.pem'), 'utf-8'),
     sendEmail: function (emailOpts, cb) {
       lastEmail = emailOpts
       setImmediate(cb)

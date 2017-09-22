@@ -31,7 +31,7 @@ Client.prototype.get = function (url, opts, cb) {
   var token = this.authToken
   if (!token) return get(url, opts, cb)
 
-  return this.verifyToken(this.cache, token, function (err) {
+  return this.verifyToken(function (err) {
     if (err) return cb(err)
     return get(url, addAuthHeader(token, opts), cb)
   })
@@ -45,7 +45,7 @@ Client.prototype.post = function (url, data, opts, cb) {
   var token = this.authToken
   if (!token) return post(url, data, opts, cb)
 
-  return this.verifyToken(this.cache, token, function (err) {
+  return this.verifyToken(function (err) {
     if (err) return cb(err)
     return post(url, data, addAuthHeader(token, opts), cb)
   })
@@ -59,7 +59,7 @@ Client.prototype.put = function (url, data, opts, cb) {
   var token = this.authToken
   if (!token) return post(url, data, opts, cb)
 
-  return this.verifyToken(this.cache, token, function (err) {
+  return this.verifyToken(function (err) {
     if (err) return cb(err)
     return put(url, data, addAuthHeader(token, opts), cb)
   })
@@ -74,7 +74,7 @@ Client.prototype.delete = function (url, opts, cb) {
   var token = this.authToken
   if (!token) return del(url, opts, cb)
 
-  return this.verifyToken(this.cache, token, function (err) {
+  return this.verifyToken(function (err) {
     if (err) return cb(err)
     return del(url, addAuthHeader(token, opts), cb)
   })
