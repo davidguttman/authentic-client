@@ -183,7 +183,7 @@ function dataHandler (method, url, data, opts, cb) {
   ) {
     if (err) return cb(err)
     if (res.statusCode >= 400) {
-      var e = new Error(res.statusMessage)
+      var e = new Error((body || {}).error || res.statusMessage)
       e.statusCode = res.statusCode
       e.body = body
 
@@ -204,7 +204,7 @@ function handler (method, url, opts, cb) {
   ) {
     if (err) return cb(err)
     if (res.statusCode >= 400) {
-      var e = new Error(res.statusMessage)
+      var e = new Error((body || {}).error || res.statusMessage)
       e.statusCode = res.statusCode
       e.body = body
 
