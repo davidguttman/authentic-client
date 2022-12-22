@@ -17,7 +17,7 @@
     "async-cache": "^1.1.0",
     "is-url-superb": "^2.0.0",
     "jsonist": "^3.0.1",
-    "jsonwebtoken": "^7.4.1",
+    "jsonwebtoken": "^9.0.0",
     "wildemitter": "^1.2.0"
   },
   "directories": {
