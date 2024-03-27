@@ -52,6 +52,8 @@ auth.confirm(opts, cb)
 auth.login(opts, cb)
 auth.changePasswordRequest(opts, cb)
 auth.changePassword(opts, cb)
+auth.magicRequest(opts, cb)
+auth.magicLogin(opts, cb)
 ```
 
 #### options ####
@@ -74,6 +76,10 @@ Optional:
 ### auth.changePasswordRequest(opts, cb)
 
 ### auth.changePassword(opts, cb)
+
+### auth.magicRequest(opts, cb)
+
+### auth.magicLogin(opts, cb)
 
 See [authentic-server](https://github.com/davidguttman/authentic-server)'s Server API for usage
 

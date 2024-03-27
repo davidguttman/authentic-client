@@ -131,6 +131,34 @@ tape('signup, confirm, login', function (t) {
   })
 })
 
+tape('microservice MAGIC-REQUEST', function (t) {
+  var magicRequestOpts = {
+    email: 'chet@scalehaus.io'
+  }
+
+  client.magicRequest(magicRequestOpts, function (err, resp) {
+    t.ifError(err, 'should not error')
+    t.equal(resp.success, true, 'should succeed')
+    var magicToken = lastEmail.magicToken
+    t.equal(magicToken.length, 60, 'should get magicToken')
+
+    var magicLoginOpts = {
+      email: magicRequestOpts.email,
+      magicToken: magicToken
+    }
+
+    client.magicLogin(magicLoginOpts, function (err, resp) {
+      t.ifError(err, 'should not error')
+      t.equal(resp.success, true, 'should succeed')
+      t.ok(resp.data.authToken.length > 800, 'should get authToken')
+
+      t.equal(resp.data.authToken, client.authToken, 'should store token')
+
+      t.end()
+    })
+  })
+})
+
 tape('cleanup', function (t) {
   server.close()
   service.close()

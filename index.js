@@ -126,6 +126,22 @@ Client.prototype.changePassword = function (opts, cb) {
   })
 }
 
+Client.prototype.magicRequest = function (opts, cb) {
+  var url = this.getEndpoint('magic-request')
+  post(url, opts, {}, cb)
+}
+
+Client.prototype.magicLogin = function (opts, cb) {
+  var self = this
+  var url = this.getEndpoint('magic-login')
+  post(url, opts, {}, function (err, data) {
+    if (err) return cb(err)
+
+    self.setAuthToken(data.data.authToken)
+    cb(null, data)
+  })
+}
+
 Client.prototype.logout = function () {
   this.setAuthToken(null)
   this.setEmail(null)
