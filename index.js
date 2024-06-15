@@ -18,6 +18,8 @@ var Client = module.exports = function (opts) {
   this.pubKeyUrl = (opts.pubKeyUrl || this.server + this.prefix + '/public-key')
   this.cache = createCache(this.pubKeyUrl, opts.cacheDuration)
 
+  this.googleSignInUrl = this.server + this.prefix + '/google'
+
   return this
 }
 
