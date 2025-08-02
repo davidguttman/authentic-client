@@ -1,7 +1,5 @@
-var AsyncCache = require('async-cache')
 var isUrl = require('is-url-superb')
 var jsonist = require('jsonist')
-var jwt = require('jsonwebtoken')
 var Wildemitter = require('wildemitter')
 
 var Client = module.exports = function (opts) {
@@ -14,9 +12,6 @@ var Client = module.exports = function (opts) {
   this.prefix = opts.prefix || '/auth'
   this.email = opts.email
   this.authToken = opts.authToken
-
-  this.pubKeyUrl = (opts.pubKeyUrl || this.server + this.prefix + '/public-key')
-  this.cache = createCache(this.pubKeyUrl, opts.cacheDuration)
 
   this.googleSignInUrl = this.server + this.prefix + '/google'
 
@@ -165,7 +160,7 @@ Client.prototype.setEmail = function (email) {
 
 Client.prototype.verifyToken = function (cb) {
   var self = this
-  return verifyToken(this.cache, this.authToken, function (err) {
+  return verifyToken(this.authToken, function (err) {
     if (err) {
       self.logout()
       return cb(err)
@@ -233,33 +228,27 @@ function handler (method, url, opts, cb) {
   })
 }
 
-function verifyToken (cache, token, cb) {
-  return cache.get('pubKey', onPublicKey)
+function verifyToken (token, cb) {
+  if (!token) return cb(new Error('jwt must be provided'))
 
-  function onPublicKey (err, pubKey) {
-    if (err) return cb(err)
-
-    Error.captureStackTrace = Error.captureStackTrace || function () { }
-
-    jwt.verify(token, pubKey, { algorithms: ['RS256'] }, cb)
-  }
-}
-
-function createCache (pubKeyUrl, cacheDuration) {
-  return new AsyncCache({
-    maxAge: cacheDuration || 1000 * 60 * 60,
-
-    load: function (key, cb) {
-      return jsonist.get(pubKeyUrl, function (err, body) {
-        if (err) return cb(err)
-
-        var pubKey = ((body || {}).data || {}).publicKey
-        if (!pubKey) return cb(new Error('Could not retrieve public key'))
-
-        return cb(null, pubKey)
-      })
+  try {
+    // Decode JWT without signature verification
+    var parts = token.split('.')
+    if (parts.length !== 3) {
+      return cb(new Error('jwt malformed'))
     }
-  })
+
+    // Decode payload (base64url)
+    var payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString())
+    // Check expiry
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      return cb(new Error('jwt expired'))
+    }
+
+    return cb(null, payload)
+  } catch (err) {
+    return cb(new Error('jwt malformed'))
+  }
 }
 
 function getUrl (url) {
