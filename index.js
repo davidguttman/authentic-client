@@ -1,6 +1,11 @@
 var isUrl = require('is-url-superb')
-var jsonist = require('jsonist')
 var Wildemitter = require('wildemitter')
+
+// Use global fetch (Node.js 18+ and browsers)
+/* global fetch */
+var fetchFn = typeof fetch !== 'undefined' ? fetch : function () {
+  throw new Error('fetch not available - requires Node.js 18+ or polyfill')
+}
 
 var Client = module.exports = function (opts) {
   if (!opts) throw new Error('opts are required argument')
@@ -188,44 +193,92 @@ function del (url, opts, cb) {
 
 function dataHandler (method, url, data, opts, cb) {
   var _url = getUrl(url)
+  var fetchOpts = {
+    method: method.toUpperCase(),
+    headers: Object.assign({
+      'Content-Type': 'application/json'
+    }, opts.headers || {})
+  }
 
-  jsonist[method === 'put' ? method : 'post'](_url, data, opts, function (
-    err,
-    body,
-    res
-  ) {
-    if (err) return cb(err)
-    if (res.statusCode >= 400) {
-      var e = new Error((body || {}).error || res.statusMessage)
-      e.statusCode = res.statusCode
-      e.body = body
+  if (data) {
+    fetchOpts.body = JSON.stringify(data)
+  }
 
-      return cb(e)
-    }
+  fetchFn(_url, fetchOpts)
+    .then(function (res) {
+      return res.text().then(function (text) {
+        var body
+        try {
+          body = text ? JSON.parse(text) : null
+        } catch (e) {
+          body = text
+        }
 
-    cb(err, body, res)
-  })
+        if (res.status >= 400) {
+          var err = new Error((body && body.error) || res.statusText)
+          err.statusCode = res.status
+          err.body = body
+          return cb(err)
+        }
+
+        // Create a simplified response object compatible with jsonist
+        var response = {
+          statusCode: res.status,
+          statusMessage: res.statusText,
+          headers: {}
+        }
+
+        // Copy headers
+        res.headers.forEach(function (value, key) {
+          response.headers[key] = value
+        })
+
+        cb(null, body, response)
+      })
+    })
+    .catch(cb)
 }
 
 function handler (method, url, opts, cb) {
   var _url = getUrl(url)
+  var fetchOpts = {
+    method: method.toUpperCase(),
+    headers: Object.assign({}, opts.headers || {})
+  }
 
-  jsonist[method === 'delete' ? method : 'get'](_url, opts, function (
-    err,
-    body,
-    res
-  ) {
-    if (err) return cb(err)
-    if (res.statusCode >= 400) {
-      var e = new Error((body || {}).error || res.statusMessage)
-      e.statusCode = res.statusCode
-      e.body = body
+  fetchFn(_url, fetchOpts)
+    .then(function (res) {
+      return res.text().then(function (text) {
+        var body
+        try {
+          body = text ? JSON.parse(text) : null
+        } catch (e) {
+          body = text
+        }
 
-      return cb(e)
-    }
+        if (res.status >= 400) {
+          var err = new Error((body && body.error) || res.statusText)
+          err.statusCode = res.status
+          err.body = body
+          return cb(err)
+        }
 
-    cb(err, body, res)
-  })
+        // Create a simplified response object compatible with jsonist
+        var response = {
+          statusCode: res.status,
+          statusMessage: res.statusText,
+          headers: {}
+        }
+
+        // Copy headers
+        res.headers.forEach(function (value, key) {
+          response.headers[key] = value
+        })
+
+        cb(null, body, response)
+      })
+    })
+    .catch(cb)
 }
 
 function verifyToken (token, cb) {

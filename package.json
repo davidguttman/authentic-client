@@ -15,7 +15,6 @@
   "license": "MIT",
   "dependencies": {
     "is-url-superb": "^2.0.0",
-    "jsonist": "^3.0.1",
     "wildemitter": "^1.2.0"
   },
   "directories": {
