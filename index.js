@@ -305,7 +305,9 @@ function verifyToken (token, cb) {
 }
 
 function getUrl (url) {
-  return process.browser && url.match(/^\//)
+  // Detect browser environment without using process
+  var isBrowser = typeof window !== 'undefined' && typeof window.location !== 'undefined'
+  return isBrowser && url.match(/^\//)
     ? window.location.origin + url
     : url
 }
